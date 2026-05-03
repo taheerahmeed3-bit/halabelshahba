@@ -4,16 +4,19 @@ export default function RestaurantOrder() {
   const [currentStep, setCurrentStep] = useState('choice');
   const [phone, setPhone] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
   const [codeVerified, setCodeVerified] = useState(false);
   const [address, setAddress] = useState('');
   const [addressDetails, setAddressDetails] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [latitude, setLatitude] = useState(30.0444);
   const [longitude, setLongitude] = useState(31.2357);
+  const [loading, setLoading] = useState(false);
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markerInstance = useRef(null);
 
+  // تحميل Google Maps
   useEffect(() => {
     if (currentStep === 'location' && mapRef.current && !mapInstance.current) {
       const script = document.createElement('script');
@@ -28,6 +31,7 @@ export default function RestaurantOrder() {
           mapTypeControl: true,
           fullscreenControl: true,
           streetViewControl: false,
+          zoomControl: true,
         });
 
         markerInstance.current = new window.google.maps.Marker({
@@ -35,6 +39,7 @@ export default function RestaurantOrder() {
           map: map,
           title: 'موقعك',
           icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
+          draggable: true,
         });
 
         new window.google.maps.Marker({
@@ -50,12 +55,27 @@ export default function RestaurantOrder() {
             { lat: 30.0444, lng: 31.2357 }
           ],
           geodesic: true,
-          strokeColor: '#888888',
-          strokeOpacity: 0.5,
-          strokeWeight: 2,
+          strokeColor: '#d4af37',
+          strokeOpacity: 0.7,
+          strokeWeight: 3,
           map: map,
         });
 
+        // عند سحب المؤشر
+        markerInstance.current.addListener('drag', (e) => {
+          const newLat = e.latLng.lat();
+          const newLng = e.latLng.lng();
+          
+          setLatitude(newLat);
+          setLongitude(newLng);
+          
+          line.setPath([
+            { lat: newLat, lng: newLng },
+            { lat: 30.0444, lng: 31.2357 }
+          ]);
+        });
+
+        // الضغط على الخريطة
         map.addListener('click', (e) => {
           const newLat = e.latLng.lat();
           const newLng = e.latLng.lng();
@@ -89,6 +109,31 @@ export default function RestaurantOrder() {
     }
   }, [currentStep, latitude, longitude]);
 
+  // دالة توليد كود عشوائي
+  const generateVerificationCode = () => {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+  };
+
+  // دالة إرسال SMS (محاكاة)
+  const sendSMS = async (phoneNumber, code) => {
+    setLoading(true);
+    
+    try {
+      // محاكاة تأخير الإرسال
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      console.log(`SMS sent to ${phoneNumber}: Your verification code is ${code}`);
+      
+      setLoading(false);
+      alert(`✅ تم إرسال الكود على الرقم: ${phoneNumber}\n\nالكود: ${code}`);
+      return true;
+    } catch (error) {
+      setLoading(false);
+      alert('❌ خطأ في إرسال الكود');
+      return false;
+    }
+  };
+
   const handleChoice = (type) => {
     if (type === 'pickup') {
       setCurrentStep('branch');
@@ -97,24 +142,32 @@ export default function RestaurantOrder() {
     }
   };
 
-  const handlePhoneSubmit = () => {
+  const handlePhoneSubmit = async () => {
     if (phone.length >= 10) {
-      setShowCodeInput(true);
+      const code = generateVerificationCode();
+      setGeneratedCode(code);
+      
+      const sent = await sendSMS(phone, code);
+      if (sent) {
+        setShowCodeInput(true);
+      }
+    } else {
+      alert('أدخل رقم صحيح');
     }
   };
 
   const handleCodeVerify = () => {
-    if (verificationCode === '1234') {
+    if (verificationCode === generatedCode) {
       setCodeVerified(true);
       setTimeout(() => setCurrentStep('location'), 500);
     } else {
-      alert('الكود غير صحيح. جرب: 1234');
+      alert(`❌ الكود غير صحيح!\nالكود الصحيح: ${generatedCode}`);
     }
   };
 
   const handleLocationSubmit = () => {
     if (address.trim() && addressDetails.trim()) {
-      alert('تم استقبال طلبك! هنجيب لك الأكل في أقرب وقت');
+      alert('✅ تم استقبال طلبك! هنجيب لك الأكل في أقرب وقت');
       setCurrentStep('choice');
       setPhone('');
       setVerificationCode('');
@@ -122,6 +175,7 @@ export default function RestaurantOrder() {
       setAddressDetails('');
       setShowCodeInput(false);
       setCodeVerified(false);
+      setGeneratedCode('');
     }
   };
 
@@ -140,14 +194,14 @@ export default function RestaurantOrder() {
             markerInstance.current.setPosition({ lat: newLat, lng: newLng });
           }
 
-          alert('تم تحديد موقعك الحالي');
+          alert('✅ تم تحديد موقعك الحالي');
         },
         (error) => {
           const randomLat = 30.0444 + (Math.random() - 0.5) * 0.05;
           const randomLng = 31.2357 + (Math.random() - 0.05) * 0.05;
           setLatitude(randomLat);
           setLongitude(randomLng);
-          alert('تم تحديد موقع تقريبي');
+          alert('✅ تم تحديد موقع تقريبي');
         }
       );
     }
@@ -209,7 +263,7 @@ export default function RestaurantOrder() {
                 <p style={{ color: '#aaa', fontSize: '0.875rem', marginTop: '0.5rem' }}>العنوان: شارع محمد فريد - وسط البلد - القاهرة</p>
                 <p style={{ color: '#aaa', fontSize: '0.875rem' }}>المواعيل: ١٠ الصبح - ١٢ بالليل</p>
                 <button
-                  onClick={() => alert('تم اختيار الفرع!')}
+                  onClick={() => alert('✅ تم اختيار الفرع!')}
                   style={{ marginTop: '1rem', padding: '0.5rem 1.5rem', backgroundColor: '#d4af37', color: '#0a0a0a', fontWeight: 'bold', border: 'none', cursor: 'pointer', borderRadius: '0.25rem' }}
                 >
                   شيل من هنا
@@ -236,10 +290,10 @@ export default function RestaurantOrder() {
                   </div>
                   <button
                     onClick={handlePhoneSubmit}
-                    disabled={phone.length < 10}
-                    style={{ width: '100%', padding: '1rem', fontWeight: 'bold', borderRadius: '1rem', border: 'none', color: '#fff', cursor: phone.length >= 10 ? 'pointer' : 'not-allowed', backgroundColor: phone.length >= 10 ? '#888888' : '#cccccc' }}
+                    disabled={phone.length < 10 || loading}
+                    style={{ width: '100%', padding: '1rem', fontWeight: 'bold', borderRadius: '1rem', border: 'none', color: '#fff', cursor: (phone.length >= 10 && !loading) ? 'pointer' : 'not-allowed', backgroundColor: (phone.length >= 10 && !loading) ? '#888888' : '#cccccc' }}
                   >
-                    التالي
+                    {loading ? '⏳ جاري الإرسال...' : 'التالي'}
                   </button>
                 </div>
               </div>
@@ -251,7 +305,11 @@ export default function RestaurantOrder() {
               <div style={{ backgroundColor: '#fff', borderTopLeftRadius: '1.5rem', borderTopRightRadius: '1.5rem', padding: '2rem', width: '100%', maxWidth: '500px', maxHeight: '80vh', overflowY: 'auto' }}>
                 <button onClick={() => { setCurrentStep('choice'); setShowCodeInput(false); }} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', fontSize: '1.5rem', color: '#999', cursor: 'pointer' }}>✕</button>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', textAlign: 'center', color: '#0a0a0a' }}>التحقق من رقم الهاتف</h2>
-                <p style={{ color: '#666', marginBottom: '2rem', textAlign: 'center', fontSize: '0.875rem' }}>أدخل الكود: <strong>{phone}</strong></p>
+                <p style={{ color: '#666', marginBottom: '2rem', textAlign: 'center', fontSize: '0.875rem' }}>
+                  تم إرسال كود التحقق على: <strong>{phone}</strong>
+                  <br/>
+                  <span style={{ fontSize: '0.75rem', color: '#999' }}>ادخل الكود المكون من 4 أرقام</span>
+                </p>
                 <div>
                   <input
                     type="text"
@@ -261,7 +319,6 @@ export default function RestaurantOrder() {
                     maxLength="4"
                     style={{ width: '100%', padding: '1rem', backgroundColor: '#f3f3f3', border: '2px solid #e0e0e0', textAlign: 'center', fontSize: '2rem', letterSpacing: '0.5em', borderRadius: '1rem', marginBottom: '1rem', color: '#0a0a0a' }}
                   />
-                  <p style={{ color: '#999', fontSize: '0.75rem', textAlign: 'center', marginBottom: '1rem' }}>الكود: 1234</p>
                   <button
                     onClick={handleCodeVerify}
                     disabled={verificationCode.length < 4}
@@ -283,20 +340,21 @@ export default function RestaurantOrder() {
                   
                   <button
                     onClick={requestUserLocation}
-                    style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', backgroundColor: '#fff', padding: '0.75rem', borderRadius: '50%', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', border: 'none', cursor: 'pointer' }}
+                    style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', backgroundColor: '#fff', padding: '0.75rem', borderRadius: '50%', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', border: 'none', cursor: 'pointer', fontSize: '1.25rem' }}
+                    title="تحديد موقعي الحالي"
                   >
                     📍
                   </button>
 
                   <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', backgroundColor: '#fff', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.75rem', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-                    <p>🔴 موقعك | 🟡 مطعمنا</p>
+                    <p style={{ margin: 0 }}>🔴 موقعك | 🟡 مطعمنا</p>
                   </div>
                 </div>
 
                 <div style={{ padding: '1rem', border: '2px solid #d4af37', borderRadius: '0.5rem', backgroundColor: 'rgba(212, 175, 55, 0.05)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
                   <p style={{ color: '#d4af37', fontWeight: 'bold', margin: '0 0 0.5rem 0' }}>الموقع الحالي:</p>
                   <p style={{ color: '#aaa', margin: '0' }}>{latitude.toFixed(4)}° , {longitude.toFixed(4)}°</p>
-                  <p style={{ color: '#666', fontSize: '0.75rem', margin: '0.5rem 0 0 0' }}>💡 اضغط على الخريطة لتغيير الموقع</p>
+                  <p style={{ color: '#666', fontSize: '0.75rem', margin: '0.5rem 0 0 0' }}>💡 اضغط على الخريطة أو اسحب المؤشر الأحمر</p>
                 </div>
 
                 <div style={{ marginBottom: '1.5rem' }}>
