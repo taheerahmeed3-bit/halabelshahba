@@ -20,7 +20,7 @@ export default function RestaurantOrder() {
   useEffect(() => {
     if (currentStep === 'location' && mapRef.current && !mapInstance.current) {
       const script = document.createElement('script');
-      script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyB41DRUbKWJHPxagoK4QZH-dmMEsMnSWBw&libraries=places';
+      script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyDHvFpOj-4nH-Izg-xA1-Q2vjdMzh62XqA';
       script.async = true;
       script.defer = true;
       
