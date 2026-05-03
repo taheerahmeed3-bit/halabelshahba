@@ -180,32 +180,37 @@ export default function RestaurantOrder() {
   };
 
   const requestUserLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newLat = position.coords.latitude;
-          const newLng = position.coords.longitude;
-          
-          setLatitude(newLat);
-          setLongitude(newLng);
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const newLat = position.coords.latitude;
+        const newLng = position.coords.longitude;
+        
+        setLatitude(newLat);
+        setLongitude(newLng);
 
-          if (mapInstance.current && markerInstance.current) {
-            mapInstance.current.panTo({ lat: newLat, lng: newLng });
-            markerInstance.current.setPosition({ lat: newLat, lng: newLng });
-          }
-
-          alert('✅ تم تحديد موقعك الحالي');
-        },
-        (error) => {
-          const randomLat = 30.0444 + (Math.random() - 0.5) * 0.05;
-          const randomLng = 31.2357 + (Math.random() - 0.05) * 0.05;
-          setLatitude(randomLat);
-          setLongitude(randomLng);
-          alert('✅ تم تحديد موقع تقريبي');
+        if (mapInstance.current && markerInstance.current) {
+          mapInstance.current.setCenter({ lat: newLat, lng: newLng });
+          mapInstance.current.setZoom(16);
+          markerInstance.current.setPosition({ lat: newLat, lng: newLng });
         }
-      );
-    }
-  };
+
+        alert('✅ تم تحديد موقعك الحالي بنجاح');
+      },
+      (error) => {
+        console.log('Error:', error);
+        alert('⚠️ يرجى السماح بالوصول للموقع من إعدادات المتصفح');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  } else {
+    alert('❌ متصفحك لا يدعم تحديد الموقع');
+  }
+};
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#0a0a0a', color: '#fff' }}>
